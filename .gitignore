@@ -1,0 +1,22 @@
+# Binaries and object files
+build/
+bin/
+*.o
+
+# Python virtual environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# LaTeX auxiliary files (keep report.tex and report.pdf)
+report.aux
+report.log
+report.out
+report.toc
+report.fls
+report.fdb_latexmk
+report.synctex.gz
+
+# System metadata
+.DS_Store
