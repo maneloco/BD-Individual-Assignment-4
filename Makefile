@@ -9,6 +9,7 @@ INC_DIR := include
 TEST_DIR := tests
 BUILD_DIR := build
 BIN_DIR := bin
+BENCH_DIR := benchmarks
 
 MPI_SRC := $(SRC_DIR)/mpi_matmul.c
 MPI_OBJ := $(BUILD_DIR)/mpi_matmul.o
@@ -22,9 +23,11 @@ MPI_TEST_BIN := $(BIN_DIR)/test_mpi
 LOCAL_TEST_SRCS := $(filter-out $(MPI_TEST_SRC), $(wildcard $(TEST_DIR)/*.c))
 LOCAL_TEST_BINS := $(patsubst $(TEST_DIR)/%.c, $(BIN_DIR)/%, $(LOCAL_TEST_SRCS))
 
-.PHONY: all clean tests run_tests run_mpi_tests help
+BENCHMARK := $(BIN_DIR)/benchmark
 
-all: tests
+.PHONY: all clean tests run_tests run_mpi_tests help performance benchmark
+
+all: benchmark
 
 $(BUILD_DIR) $(BIN_DIR):
 	@mkdir -p $@
@@ -42,6 +45,12 @@ $(MPI_TEST_BIN): $(MPI_TEST_SRC) $(MPI_OBJ) $(CORE_OBJS) | $(BIN_DIR)
 $(BIN_DIR)/test_%: $(TEST_DIR)/test_%.c $(CORE_OBJS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) $< $(CORE_OBJS) -o $@ $(LDFLAGS)
 	@echo "==> Test built successfully: $@"
+
+$(BENCHMARK): $(BENCH_DIR)/benchmark.c $(BENCH_DIR)/benchmark_harness.c $(MPI_OBJ) $(CORE_OBJS) | $(BIN_DIR)
+	$(MPICC) $(CFLAGS) -I$(BENCH_DIR) $^ -o $@ $(LDFLAGS)
+	@echo "==> Benchmark built successfully: $@"
+
+benchmark: $(BENCHMARK)
 
 tests: $(LOCAL_TEST_BINS) $(MPI_TEST_BIN)
 
@@ -61,13 +70,20 @@ run_tests: tests
 	done
 	@$(MAKE) run_mpi_tests
 
+performance:
+	@echo "\n=== COMPILING FOR PERFORMANCE ==="
+	@$(MAKE) clean
+	@$(MAKE) benchmark CFLAGS="-std=c11 -Wall -Wextra -Wpedantic -O3 -march=native -Iinclude"
+	@echo "==> Performance build complete: $(BENCHMARK)\n"
+
 clean:
 	@rm -rf $(BUILD_DIR) $(BIN_DIR)
 	@echo "==> Clean complete."
 
 help:
 	@echo "Available commands:"
-	@echo "  make               - Compiles all unit tests"
+	@echo "  make               - Compiles the benchmark suite ($(BENCHMARK))"
+	@echo "  make performance   - Compiles benchmark with -O3 -march=native"
 	@echo "  make tests         - Compiles local and MPI unit tests"
 	@echo "  make run_tests     - Runs all local and MPI unit tests (P = 1, 2, 3, 4)"
 	@echo "  make run_mpi_tests - Runs MPI unit tests only (P = 1, 2, 3, 4)"
